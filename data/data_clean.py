@@ -1,5 +1,4 @@
-import _thread
-from util import mysql_pdbc
+from util import ProcessBar
 from util import util
 MIN_STAR = 5
 
@@ -13,25 +12,6 @@ def get_name_by_id(db_object, repo_id):
     else:
         repo_name = repo[0]['name']
     return repo_name
-
-
-# 检测repo1和repo2是否为fork关系、所有者是否相同，返回总权值
-def fork_or_owner_relation(db_object, repo1_id, repo2_id):
-    weight = 0
-    sql = "select * from has_pr_projects where id = " + str(repo1_id)
-    repo1 = db_object.execute(sql)[0]
-    sql = "select * from has_pr_projects where id = " + str(repo2_id)
-    repo2 = db_object.execute(sql)[0]
-
-    if repo1['forked_from'] is not None and repo1['forked_from'] == repo2_id:
-        weight += FORK_WEIGHT
-    if repo2['forked_from'] is not None and repo2['forked_from'] == repo1_id:
-        weight += FORK_WEIGHT
-
-    if repo1['owner_id'] == repo2['owner_id']:
-        weight += SAME_OWNER_WEIGHT
-
-    return weight
 
 
 # sql获取每年每月项目id和对应的pr提交人员
@@ -140,7 +120,7 @@ def table_init(dbObject_GHTorrent, year):
 
 
 def pr_to_coders(dbObject, year):
-    sql = "select pull_request_id, created_at, actor_id from pull_request_history where created_at < 'next_year-01-01 00:00:00' " \
+    sql = "select pull_request_id, created_at, actor_id from pull_request_history where action = 'merged' and created_at < 'next_year-01-01 00:00:00' " \
           "and created_at > 'year-01-01 00:00:00' "
     sql = sql.replace('next_year', str(year + 1))
     sql = sql.replace('year', str(year))
@@ -209,6 +189,7 @@ def owner_id_to_coders(dbObject, year):
             index = 0
 
 
+# 按年分割pr提交
 def save_repo_pr_coders_by_year(dbObject_GHTorrent):
     for year in range(2010, 2019):
         print(year)
@@ -217,6 +198,7 @@ def save_repo_pr_coders_by_year(dbObject_GHTorrent):
         pr_to_coders(dbObject_GHTorrent, year)
 
 
+# 获取每年新建的项目数
 def get_repo_cerate_num_by_year(dbObject_GHTorrent):
     for year in range(2010, 2019):
         sql = "select count(*) from projects where created_at < 'next_year-01-01 00:00:00' " \
