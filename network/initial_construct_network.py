@@ -5,6 +5,16 @@ from data import data_clean
 from util import util
 
 
+# 初始化结果文件
+def init_res_file(filename):
+    # 结果输出文件初始化
+    link_filename = "links_" + filename + ".csv"
+    util.print_list_row_to_csv(link_filename, [['Source', 'Target', 'Weight', 'Type']], 'w')
+    node_filename = "nodes_" + filename + ".csv"
+    util.print_list_row_to_csv(node_filename, [['id', 'label']], 'w')
+    return node_filename, link_filename
+
+
 # 数据处理
 def deal_data(db_object):
     # 获取每年新建的项目数
@@ -27,13 +37,26 @@ def get_name_by_id(db_object, repo_id):
 
 
 # 获取项目id和对应的pr人员
-def get_repos_and_pr_coders(db_object, repos_id, pr_coders, sql_table_name):
-    sql = "SELECT repo_id, GROUP_CONCAT(user_id) coders from " + sql_table_name + " group by repo_id"
+def get_repos_and_pr_coders(db_object, repos_id, pr_coders, sql_table_name, year, month):
+    if month != 10:
+        sql = "SELECT repo_id, GROUP_CONCAT(user_id) coders from " + sql_table_name + " where created_at < 'year-next_month-01 00:00:00' and created_at > 'year-month-01 00:00:00' group by repo_id"
+        next_month = month + 3
+        if next_month < 10:
+            sql = sql.replace('next_month', '0' + str(next_month))
+        else:
+            sql = sql.replace('next_month', str(next_month))
+        sql = sql.replace('month', '0' + str(month))
+    else:
+        sql = "SELECT repo_id, GROUP_CONCAT(user_id) coders from " + sql_table_name + " where created_at > 'year-10-01 00:00:00' group by repo_id"
+    sql = sql.replace('year', str(year))
+
+    print(sql)
+
     all_pr_coders = db_object.execute(sql)
     for coders in all_pr_coders:
         if coders['coders'] != '':
             coder = coders['coders'].split(',')
-            if len(coder) > 9:
+            if len(coder) > 3:
                 pr_coders.append(coder)
                 repos_id.append(coders['repo_id'])
 
@@ -93,18 +116,15 @@ if __name__ == '__main__':
     # 按年构建网络
     for year in range(2010, 2019):
         print(year)
+        for month in [1, 4, 7, 10]:
+            pr_time = str(year) + '_' + str(month) + '_' + str(month + 2)
+            node_filename, link_filename = init_res_file(pr_time)
 
-        # 结果输出文件初始化
-        link_filename = "links_" + str(year) + ".csv"
-        util.print_list_row_to_csv(link_filename, [['Source', 'Target', 'Weight', 'Type']], 'w')
-        node_filename = "nodes_" + str(year) + ".csv"
-        util.print_list_row_to_csv(node_filename, [['id', 'label']], 'w')
+            # 获取项目id和对应的pr人员
+            repos_id = []
+            pr_coders = []
+            table_name = "pr_coders_" + str(year)
+            get_repos_and_pr_coders(dbObject_GHTorrent, repos_id, pr_coders, table_name, year, month)
 
-        # 获取项目id和对应的pr人员
-        repos_id = []
-        pr_coders = []
-        table_name = "pr_coders_" + str(year)
-        get_repos_and_pr_coders(dbObject_GHTorrent, repos_id, pr_coders, table_name)
-
-        # 网络构建
-        network_build(dbObject_GHTorrent, repos_id, pr_coders, node_filename, link_filename)
+            # 网络构建
+            network_build(dbObject_GHTorrent, repos_id, pr_coders, node_filename, link_filename)
