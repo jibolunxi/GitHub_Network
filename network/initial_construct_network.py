@@ -1,39 +1,22 @@
+import csv
 from util import mysql_pdbc
-import numpy as np
-from util.ProcessBar import ProcessBar
-from data import data_clean
-from util import util
+
+
+# 按行输出到文件
+def print_list_row_to_csv(filename, data, type):
+    filename = filename
+    with open(filename, type, newline='')as f:
+        f_csv = csv.writer(f)
+        for d in data:
+            f_csv.writerow(d)
 
 
 # 初始化结果文件
 def init_res_file(filename):
     # 结果输出文件初始化
     link_filename = "links_" + filename + ".csv"
-    util.print_list_row_to_csv(link_filename, [['Source', 'Target', 'Weight', 'Type']], 'w')
-    node_filename = "nodes_" + filename + ".csv"
-    util.print_list_row_to_csv(node_filename, [['id', 'label']], 'w')
-    return node_filename, link_filename
-
-
-# 数据处理
-def deal_data(db_object):
-    # 获取每年新建的项目数
-    data_clean.get_repo_cerate_num_by_year(db_object)
-    # 按年分割pr提交
-    data_clean.save_repo_pr_coders_by_year(db_object)
-    # 获取pr和star数top100的项目并合并
-    data_clean.get_top_pr_star_projects_by_year(db_object, 100)
-
-
-# 通过id获取代码库名称
-def get_name_by_id(db_object, repo_id):
-    sql = "select * from projects where id = " + str(repo_id)
-    repo = db_object.execute(sql)
-    if len(repo) == 0:
-        repo_name = ''
-    else:
-        repo_name = repo[0]['url'][29:]
-    return repo_name
+    print_list_row_to_csv(link_filename, [['Source', 'Target', 'Weight', 'Type']], 'w')
+    return link_filename
 
 
 # 获取项目id和对应的pr人员
@@ -44,7 +27,7 @@ def get_repos_and_pr_coders(db_object, repos_id, pr_coders, sql_table_name):
     for coders in all_pr_coders:
         if coders['coders'] != '':
             coder = coders['coders'].split(',')
-            if len(coder) > 0:
+            if len(coder) > 1:
                 pr_coders.append(coder)
                 repos_id.append(coders['repo_id'])
 
@@ -52,15 +35,11 @@ def get_repos_and_pr_coders(db_object, repos_id, pr_coders, sql_table_name):
 
 
 # 网络构建
-def network_build(db_object, repos_id, pr_coders, node_filename, link_filename):
+def network_build(repos_id, pr_coders, link_filename):
     # 网络节点和边
-    res_nodes = []
     res_links = []
-    res_node_id = set()
     # 项目数
     num = len(repos_id)
-    # 进度条
-    pb = ProcessBar(num)
 
     # 计算边权重
     for index_i in range(num):
@@ -72,45 +51,25 @@ def network_build(db_object, repos_id, pr_coders, node_filename, link_filename):
                 continue
             link_data = [repos_id[index_i], repos_id[index_j], weight_count, 'undirected']
             res_links.append(link_data)
-            res_node_id.add(repos_id[index_i])
-            res_node_id.add(repos_id[index_j])
 
         # 存储边权重
         if len(res_links) > 100000000:
-            util.print_list_row_to_csv(link_filename, res_links, 'a')
-            res_links = []
-
-        # 进度条+1
-        pb.print_next()
-
-    # 获取项目id和项目名
-    for repo_id in res_node_id:
-        repo_name = get_name_by_id(db_object, repo_id)
-        if repo_name == '':
-            continue
-        node_data = [repo_id, repo_name]
-        res_nodes.append(node_data)
-        if len(res_nodes) > 100000000:
-            util.print_list_row_to_csv(node_filename, res_nodes, 'a')
+            print_list_row_to_csv(link_filename, res_links, 'a')
             res_links = []
 
     # 存储剩余节点和边数据
-    util.print_list_row_to_csv(link_filename, res_links, 'a')
-    util.print_list_row_to_csv(node_filename, res_nodes, 'a')
+    print_list_row_to_csv(link_filename, res_links, 'a')
 
 
 if __name__ == '__main__':
     # 数据库对象
     dbObject_GHTorrent = mysql_pdbc.SingletonModel()
 
-    # 数据预处理
-    # deal_data(dbObject_GHTorrent)
-
     # 按年构建网络
     for year in range(2010, 2019):
         print(year)
         pr_time = str(year)
-        node_filename, link_filename = init_res_file(pr_time)
+        link_filename = init_res_file(pr_time)
 
         # 获取项目id和对应的pr人员
         repos_id = []
@@ -119,4 +78,4 @@ if __name__ == '__main__':
         get_repos_and_pr_coders(dbObject_GHTorrent, repos_id, pr_coders, table_name)
 
         # 网络构建
-        network_build(dbObject_GHTorrent, repos_id, pr_coders, node_filename, link_filename)
+        network_build(repos_id, pr_coders, link_filename)
