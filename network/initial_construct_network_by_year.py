@@ -1,21 +1,22 @@
 import csv
 from util import mysql_pdbc
+from util import util
 
 
-# 按行输出到文件
-def print_list_row_to_csv(filename, data, type):
-    filename = filename
-    with open(filename, type, newline='')as f:
-        f_csv = csv.writer(f)
-        for d in data:
-            f_csv.writerow(d)
+# # 按行输出到文件
+# def print_list_row_to_csv(filename, data, type):
+#     filename = filename
+#     with open(filename, type, newline='')as f:
+#         f_csv = csv.writer(f)
+#         for d in data:
+#             f_csv.writerow(d)
 
 
 # 初始化结果文件
 def init_res_file(filename):
     # 结果输出文件初始化
     link_filename = "links_" + filename + ".csv"
-    print_list_row_to_csv(link_filename, [['Source', 'Target', 'Weight', 'Type']], 'w')
+    util.print_list_row_to_csv(link_filename, [['Source', 'Target', 'Weight', 'Type']], 'w')
     return link_filename
 
 
@@ -54,11 +55,11 @@ def network_build(repos_id, pr_coders, link_filename):
 
         # 存储边权重
         if len(res_links) > 100000000:
-            print_list_row_to_csv(link_filename, res_links, 'a')
+            util.print_list_row_to_csv(link_filename, res_links, 'a')
             res_links = []
 
     # 存储剩余节点和边数据
-    print_list_row_to_csv(link_filename, res_links, 'a')
+    util.print_list_row_to_csv(link_filename, res_links, 'a')
 
 
 if __name__ == '__main__':
