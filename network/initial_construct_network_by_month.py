@@ -80,7 +80,7 @@ if __name__ == '__main__':
     dbObject_GHTorrent = mysql_pdbc.SingletonModel()
 
     # 按月构建网络
-    for year in range(2010, 2019):
+    for year in range(2011, 2019):
         for month in range(1, 13):
             pr_time = str(year) + "_" + str(month)
             link_filename = init_res_file(pr_time)

@@ -5,53 +5,22 @@ import community
 import networkx as nx
 
 
-# 通过id获取代码库名称
-def get_name_by_id(db_object, repo_id):
-    sql = "select * from projects where id = " + str(repo_id)
-    repo = db_object.execute(sql)
-    if len(repo) == 0:
-        repo_name = ''
-    else:
-        repo_name = repo[0]['url'][29:]
-    return repo_name
-
-
-# 通过边文件获取节点
-def get_nodes_by_link(dbObject_GHTorrent, node_filename, link_filename):
-    util.print_list_row_to_csv(node_filename, [['id', 'label']], 'w')
-    link_data = []
-    node_data = []
-    nodes_id = set()
-    util.get_data_from_csv(link_data, link_filename)
-    link_data = link_data[1:]
-    for link in link_data:
-        nodes_id.add(link[0])
-        nodes_id.add(link[1])
-    for node_id in nodes_id:
-        node_name = get_name_by_id(dbObject_GHTorrent, node_id)
-        node_data.append([node_id, node_name])
-    util.print_list_row_to_csv(node_filename, node_data, 'a')
-
-
 if __name__ == '__main__':
     # 数据库对象
     # dbObject_GHTorrent = mysql_pdbc.SingletonModel()
 
     for year in range(2011, 2019):
         for month in range(1, 13):
-            print(str(year) + "_" + str(month))
-            link_filename = "month\\" + "links_" + str(year) + "_" + str(month) + ".csv"
-            node_filename = "month\\" + "nodes_" + str(year) + "_" + str(month) + ".csv"
-            # 通过边文件获取节点（已完成）
-            # get_nodes_by_link(dbObject_GHTorrent, node_filename, link_filename)
+            link_filename = "data_2.0\\month\\" + "links_" + str(year) + "_" + str(month) + ".csv"
+            node_filename = "data_2.0\\month\\" + "nodes_" + str(year) + "_" + str(month) + ".csv"
 
-            # ['Source', 'Target', 'Weight', 'Type']
+            # 获取边 ['Source', 'Target', 'Weight', 'Type']
             link_data = []
             util.get_data_from_csv(link_data, link_filename)
             link_data = link_data[1:]
             if len(link_data) == 0:
                 continue
-            # ['id', 'label']
+            # 获取节点 ['id', 'label']
             node_data = []
             util.get_data_from_csv(node_data, node_filename)
             node_data = node_data[1:]
@@ -63,7 +32,13 @@ if __name__ == '__main__':
             partition = community.best_partition(G, partition=None, weight='weight', resolution=1.0)
             # 计算模块度
             mod = community.modularity(partition, G)
-            print(mod)
+
+            # 模块度，平均集聚系数，直径，最短路径，度中心性
+            # print(mod, '\t', nx.average_clustering(G), '\t', nx.diameter(G), '\t', nx.average_shortest_path_length(G), '\t', nx.degree_centrality(G))
+            # 社区数，模块度，平均集聚系数
+            # print(max(partition.values()), '\t', mod, '\t', nx.average_clustering(G))
+            # 社区数
+            print(str(year) + "_" + str(month), '\t', len(link_data), '\t', len(node_data), '\t', max(partition.values()), '\t', mod, '\t', nx.average_clustering(G))
 
             # drawing
             # values = [partition.get(node) for node in G.nodes()]

@@ -136,7 +136,7 @@ def pr_to_coders(dbObject, year):
     for pr_history in pr_history_list:
         count += 1
         index += 1
-        if pr_history['actor_id'] is not None:
+        if pr_history['actor_id'] is not None:      ############# 有问题，这里的actor_id是合并者id ################
             pr_sql = "select id, base_repo_id from pull_requests where id = " + str(pr_history['pull_request_id'])
             pr = dbObject.execute(pr_sql)[0]
             if count == size:
